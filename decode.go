@@ -6,6 +6,6 @@ import (
 	"github.com/sonh/qs"
 )
 
-func Marshal(v any) (url.Values, error) {
+func Encode(v any) (url.Values, error) {
 	return qs.NewEncoder().Values(v)
 }

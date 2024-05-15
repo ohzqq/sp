@@ -23,7 +23,7 @@ var testParams = &params{
 func TestUnmarshal(t *testing.T) {
 	q := parsed()
 	p := params{}
-	err := Unmarshal(q, &p)
+	err := Decode(q, &p)
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,7 +42,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestMarshal(t *testing.T) {
-	v, err := Marshal(testParams)
+	v, err := Encode(testParams)
 	if err != nil {
 		t.Error(err)
 	}
