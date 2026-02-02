@@ -6,18 +6,20 @@ import (
 	"testing"
 )
 
-const urlq = `searchableAttributes=title&attributesForFaceting=tags,authors,series,narrators&index=default`
+const urlq = `searchableAttributes=title&attributesForFaceting=tags,authors,series,narrators&index=default&poot="toot"`
 
 type params struct {
 	SrchAttr  []string `qs:"searchableAttributes"`
 	FacetAttr []string `qs:"attributesForFaceting"`
 	Index     string   `qs:"index"`
+	Poot      string   `qs:"-"`
 }
 
 var testParams = &params{
 	SrchAttr:  []string{"title"},
 	FacetAttr: []string{"tags", "authors", "series", "narrators"},
 	Index:     "default",
+	Poot:      "toot",
 }
 
 func TestUnmarshal(t *testing.T) {
