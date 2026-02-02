@@ -87,6 +87,10 @@ func (b *DefaultBinder) Bind(c url.Values, target any) error {
 	return BindQueryParams(c, target)
 }
 
+func (b *DefaultBinder) BindRequest(c *http.Request, target any) error {
+	return BindBody(c, target)
+}
+
 // bindData will bind data ONLY fields in destination struct that have EXPLICIT tag
 func bindData(destination any, data map[string][]string, tag string, dataFiles map[string][]*multipart.FileHeader) error {
 	if destination == nil || (len(data) == 0 && len(dataFiles) == 0) {

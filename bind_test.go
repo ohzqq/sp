@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-const urlq = `searchableAttributes=title&attributesForFaceting=tags,authors,series,narrators&index=default`
+const urlq = `searchableAttributes=title&attributesForFaceting=tags,authors,series,narrators&index=default&poot="toot"`
 
 type params struct {
 	SrchAttr  []string `qs:"searchableAttributes"`
