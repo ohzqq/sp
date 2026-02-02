@@ -2,10 +2,9 @@ package sp
 
 import (
 	"net/url"
-
-	"github.com/sonh/qs"
 )
 
-func Encode(v any) (url.Values, error) {
-	return qs.NewEncoder().Values(v)
+func Decode(v url.Values, t any) error {
+	b := DefaultBinder{}
+	return b.Bind(t, v)
 }
