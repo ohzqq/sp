@@ -71,7 +71,7 @@ func BindBody(req *http.Request, target any) (err error) {
 		if err != nil {
 			return echo.ErrBadRequest.Wrap(err)
 		}
-		if err = bindData(target, req.MultipartForm.Value, "form", req.MultipartForm.File); err != nil {
+		if err = bindData(target, req.MultipartForm.Value, "qs", req.MultipartForm.File); err != nil {
 			return echo.ErrBadRequest.Wrap(err)
 		}
 	default:
@@ -151,7 +151,7 @@ func bindData(destination any, data map[string][]string, tag string, dataFiles m
 		inputFieldName := typeField.Tag.Get(tag)
 		if typeField.Anonymous && structFieldKind == reflect.Struct && inputFieldName != "" {
 			// if anonymous struct with query/param/form tags, report an error
-			return errors.New("query/param/form tags are not allowed with anonymous struct field")
+			return errors.New("query/form tags are not allowed with anonymous struct field")
 		}
 
 		if inputFieldName == "" {
