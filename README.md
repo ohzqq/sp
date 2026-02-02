@@ -1,18 +1,23 @@
-# from qs:
+# sp
 
 Zero-dependencies package to encodes structs into url.Values.
 
 ## Installation
 ```bash
-go get github.com/sonh/qs
+go get github.com/ohzqq/sp
 ```
 
 ## Usage
 ```go
 import (
-    "github.com/sonh/qs"
+    "github.com/ohzqq/sp"
 )
 ```
+
+# qs Readme
+
+refer to [original](https://github.com/sonh/qs)
+
 Package qs exports `NewEncoder()` function to create an encoder. 
 
 Encoder caches struct info to speed up encoding process, use a single instance is highly recommended. 
