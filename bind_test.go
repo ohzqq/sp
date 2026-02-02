@@ -12,12 +12,14 @@ type params struct {
 	SrchAttr  []string `qs:"searchableAttributes"`
 	FacetAttr []string `qs:"attributesForFaceting"`
 	Index     string   `qs:"index"`
+	Poot      string   `qs:"-"`
 }
 
 var testParams = &params{
 	SrchAttr:  []string{"title"},
 	FacetAttr: []string{"tags", "authors", "series", "narrators"},
 	Index:     "default",
+	Poot:      "toot",
 }
 
 func TestUnmarshal(t *testing.T) {

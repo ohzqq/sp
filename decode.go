@@ -6,5 +6,5 @@ import (
 
 func Decode(v url.Values, t any) error {
 	b := DefaultBinder{}
-	return b.Bind(t, v)
+	return b.Bind(v, t)
 }
