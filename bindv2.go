@@ -27,25 +27,15 @@ package sp
 import (
 	"encoding"
 	"errors"
-	"mime/multipart"
-	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/labstack/echo/v5"
 )
 
 const (
 	defaultMemory int64 = 32 << 20 // 32 MB
 )
-
-// Binder is the interface that wraps the Bind method.
-type Binder interface {
-	Bind(c url.Values, target any) error
-}
 
 // DefaultBinder is the default implementation of the Binder interface.
 type DefaultBinder struct{}
@@ -66,58 +56,18 @@ type bindMultipleUnmarshaler interface {
 }
 
 // BindQueryParams binds query params to bindable object
-func BindQueryParams(v url.Values, target any) error {
-	if err := bindData(target, v, "qs", nil); err != nil {
-		return echo.ErrBadRequest.Wrap(err)
+func BindQueryParams[Q ~map[string][]string](v Q, target any) error {
+	if err := bindData(target, v, "qs"); err != nil {
+		return err
 	}
 	return nil
-}
-
-// BindBody binds request body contents to bindable object
-// NB: then binding forms take note that this implementation uses standard library form parsing
-// which parses form data from BOTH URL and BODY if content type is not MIMEMultipartForm
-// See non-MIMEMultipartForm: https://golang.org/pkg/net/http/#Request.ParseForm
-// See MIMEMultipartForm: https://golang.org/pkg/net/http/#Request.ParseMultipartForm
-func BindBody(req *http.Request, target any) (err error) {
-	// mediatype is found like `mime.ParseMediaType()` does it
-	base, _, _ := strings.Cut(req.Header.Get(echo.HeaderContentType), ";")
-	mediatype := strings.TrimSpace(base)
-
-	switch mediatype {
-	case echo.MIMEApplicationJSON:
-	case echo.MIMEApplicationXML, echo.MIMETextXML:
-	case echo.MIMEApplicationForm:
-	case echo.MIMEMultipartForm:
-		err := req.ParseMultipartForm(defaultMemory)
-		if err != nil {
-			return echo.ErrBadRequest.Wrap(err)
-		}
-		if err = bindData(target, req.MultipartForm.Value, "qs", req.MultipartForm.File); err != nil {
-			return echo.ErrBadRequest.Wrap(err)
-		}
-	default:
-		return &echo.HTTPError{Code: http.StatusUnsupportedMediaType}
-	}
-	return nil
-}
-
-// Bind implements the `Binder#Bind` function.
-// Binding is done in following order: 1) path params; 2) query params; 3) request body. Each step COULD override previous
-// step bound values. For single source binding use their own methods BindBody, BindQueryParams, BindPathValues.
-func (b *DefaultBinder) Bind(c url.Values, target any) error {
-	return BindQueryParams(c, target)
-}
-
-func (b *DefaultBinder) BindRequest(c *http.Request, target any) error {
-	return BindBody(c, target)
 }
 
 // bindData will bind data ONLY fields in destination struct that have EXPLICIT tag
-func bindData(destination any, data map[string][]string, tag string, dataFiles map[string][]*multipart.FileHeader) error {
-	if destination == nil || (len(data) == 0 && len(dataFiles) == 0) {
+func bindData(destination any, data map[string][]string, tag string) error {
+	if destination == nil || (len(data) == 0) {
 		return nil
 	}
-	hasFiles := len(dataFiles) > 0
 	typ := reflect.TypeOf(destination).Elem()
 	val := reflect.ValueOf(destination).Elem()
 
@@ -183,22 +133,12 @@ func bindData(destination any, data map[string][]string, tag string, dataFiles m
 			// If tag is nil, we inspect if the field is a not BindUnmarshaler struct and try to bind data into it (might contain fields with tags).
 			// structs that implement BindUnmarshaler are bound only when they have explicit tag
 			if _, ok := structField.Addr().Interface().(BindUnmarshaler); !ok && structFieldKind == reflect.Struct {
-				if err := bindData(structField.Addr().Interface(), data, tag, dataFiles); err != nil {
+				if err := bindData(structField.Addr().Interface(), data, tag); err != nil {
 					return err
 				}
 			}
 			// does not have explicit tag and is not an ordinary struct - so move to next field
 			continue
-		}
-
-		if hasFiles {
-			if ok, err := isFieldMultipartFile(structField.Type()); err != nil {
-				return err
-			} else if ok {
-				if ok := setMultipartFileHeaderTypes(structField, inputFieldName, dataFiles); ok {
-					continue
-				}
-			}
 		}
 
 		inputValue, exists := data[inputFieldName]
@@ -399,51 +339,4 @@ func setFloatField(value string, bitSize int, field reflect.Value) error {
 		field.SetFloat(floatVal)
 	}
 	return err
-}
-
-var (
-	// NOT supported by bind as you can NOT check easily empty struct being actual file or not
-	multipartFileHeaderType = reflect.TypeFor[multipart.FileHeader]()
-	// supported by bind as you can check by nil value if file existed or not
-	multipartFileHeaderPointerType      = reflect.TypeFor[*multipart.FileHeader]()
-	multipartFileHeaderSliceType        = reflect.TypeFor[[]multipart.FileHeader]()
-	multipartFileHeaderPointerSliceType = reflect.TypeFor[[]*multipart.FileHeader]()
-)
-
-func isFieldMultipartFile(field reflect.Type) (bool, error) {
-	switch field {
-	case multipartFileHeaderPointerType,
-		multipartFileHeaderSliceType,
-		multipartFileHeaderPointerSliceType:
-		return true, nil
-	case multipartFileHeaderType:
-		return true, errors.New("binding to multipart.FileHeader struct is not supported, use pointer to struct")
-	default:
-		return false, nil
-	}
-}
-
-func setMultipartFileHeaderTypes(structField reflect.Value, inputFieldName string, files map[string][]*multipart.FileHeader) bool {
-	fileHeaders := files[inputFieldName]
-	if len(fileHeaders) == 0 {
-		return false
-	}
-
-	result := true
-	switch structField.Type() {
-	case multipartFileHeaderPointerSliceType:
-		structField.Set(reflect.ValueOf(fileHeaders))
-	case multipartFileHeaderSliceType:
-		headers := make([]multipart.FileHeader, len(fileHeaders))
-		for i, fileHeader := range fileHeaders {
-			headers[i] = *fileHeader
-		}
-		structField.Set(reflect.ValueOf(headers))
-	case multipartFileHeaderPointerType:
-		structField.Set(reflect.ValueOf(fileHeaders[0]))
-	default:
-		result = false
-	}
-
-	return result
 }
